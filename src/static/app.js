@@ -25,7 +25,48 @@ document.addEventListener("DOMContentLoaded", () => {
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants-section">
+            <strong>Current Participants (${details.participants.length}):</strong>
+            <ul class="participants-list">
+              ${details.participants.map(participant => `
+                <li class="participant-item">
+                  <span>${participant}</span>
+                  <button class="delete-btn" data-activity="${name}" data-email="${participant}" title="Remove participant">✕</button>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
         `;
+
+        // Add event listeners for delete buttons
+        const deleteButtons = activityCard.querySelectorAll('.delete-btn');
+        deleteButtons.forEach(button => {
+          button.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const activityName = button.getAttribute('data-activity');
+            const participantEmail = button.getAttribute('data-email');
+
+            if (confirm(`Are you sure you want to unregister ${participantEmail}?`)) {
+              try {
+                const response = await fetch(
+                  `/activities/${encodeURIComponent(activityName)}/unregister?email=${encodeURIComponent(participantEmail)}`,
+                  { method: 'DELETE' }
+                );
+
+                if (response.ok) {
+                  // Refresh activities after successful unregister
+                  fetchActivities();
+                } else {
+                  const result = await response.json();
+                  alert(result.detail || 'Failed to unregister participant');
+                }
+              } catch (error) {
+                alert('Failed to unregister participant. Please try again.');
+                console.error('Error unregistering:', error);
+              }
+            }
+          });
+        });
 
         activitiesList.appendChild(activityCard);
 
@@ -62,6 +103,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Refresh activities after successful signup
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
